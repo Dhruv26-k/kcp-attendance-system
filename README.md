@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Khalsa College Patiala (KCP) - Smart Attendance System
 
-## Getting Started
+A professional, biometric-based attendance solution designed for faculty members at Khalsa College Patiala. This system uses facial recognition and geofencing to ensure secure and accurate attendance marking.
 
-First, run the development server:
+## 🚀 Technology Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### **Frontend (Next.js)**
+* **Framework:** Next.js 16 (App Router) with React for high-performance UI rendering.
+* **Styling:** Tailwind CSS for a modern, mobile-responsive dashboard design.
+* **Icons:** Lucide React for professional interface iconography.
+* **Biometrics:** face-api.js (built on TensorFlow.js) for browser-based facial landmark detection and recognition.
+* **Deployment:** Vercel.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### **Backend (Node.js & Express)**
+* **Runtime:** Node.js for scalable server-side operations.
+* **Framework:** Express.js for building robust API endpoints.
+* **Database:** MongoDB for secure storage of faculty profiles, face descriptors, and attendance logs.
+* **Real-time Engine:** Socket.io for instant attendance alerts and system updates.
+* **Geofencing:** ProxiScan technology using the Haversine formula to enforce a strict 5-meter radius around college premises.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 📱 Features
+* **Facial Recognition:** Secure biometric verification using the device camera.
+* **ProxiScan:** Location-based verification ensuring the user is physically present at the college.
+* **Mobile-First Dashboard:** Fully responsive navigation including a slide-out drawer for mobile devices.
+* **Real-time Logs:** Instant feedback on attendance status (Present, Late, or Absent).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Installation & Setup
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/Dhruv26-k/kcp-attendance-system.git](https://github.com/Dhruv26-k/kcp-attendance-system.git)
