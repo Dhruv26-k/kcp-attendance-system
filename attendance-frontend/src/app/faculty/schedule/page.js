@@ -1,19 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   LayoutDashboard, Calendar, Settings, Bell, User, 
-  Clock, Plus, MapPin, BookOpen, Trash2, AlertCircle, Menu
+  Clock, Plus, MapPin, BookOpen, Trash2, AlertCircle, Menu, Loader2, Inbox
 } from "lucide-react";
 
 export default function FacultySchedule() {
-  // Dummy data for the schedule (Later, this will come from your MongoDB database)
-  const [schedule, setSchedule] = useState([
-    { id: 1, subject: "Digital Electronics", day: "Monday", startTime: "10:00", endTime: "11:00", room: "Room 304" },
-    { id: 2, subject: "Data Structures", day: "Monday", startTime: "11:30", endTime: "12:30", room: "Lab 2" },
-    { id: 3, subject: "Web Development", day: "Tuesday", startTime: "09:00", endTime: "10:30", room: "Lab 1" },
-  ]);
+  // --- DATABASE & PROFILE STATES ---
+  const [schedule, setSchedule] = useState([]);
+  const [facultyData, setFacultyData] = useState(null); // Added for dynamic name
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states for adding a new lecture
   const [newSubject, setNewSubject] = useState("");
@@ -22,208 +21,250 @@ export default function FacultySchedule() {
   const [newEndTime, setNewEndTime] = useState("");
   const [newRoom, setNewRoom] = useState("");
 
-  const handleAddLecture = (e) => {
+  // --- 1. FETCH DATA ON LOAD ---
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        const userId = localStorage.getItem("loggedInFacultyId") || "temp-id-123";
+
+        // --- MOCK BYPASS LOGIC ---
+        if (userId === "KCP-MOCK-123") {
+          setFacultyData({ name: "Prof. Arshdeep Singh", department: "Computer Science" });
+          setSchedule([]); // Start with empty schedule for mock
+          setIsLoading(false);
+          return;
+        }
+
+        // --- REAL BACKEND FETCH ---
+        // Fetch Profile for Header
+        const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/profile/${userId}`);
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          setFacultyData(profile);
+        }
+
+        // Fetch Schedule for Table
+        const scheduleRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/schedule/${userId}`);
+        if (scheduleRes.ok) {
+          const scheduleData = await scheduleRes.json();
+          setSchedule(scheduleData);
+        }
+      } catch (error) {
+        console.error("Data sync error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
+  // --- 2. ADD LECTURE TO DATABASE ---
+  const handleAddLecture = async (e) => {
     e.preventDefault();
     if (!newSubject || !newStartTime || !newEndTime || !newRoom) return;
 
+    setIsSubmitting(true);
+    const userId = localStorage.getItem("loggedInFacultyId");
+
     const newClass = {
-      id: schedule.length + 1,
+      userId,
       subject: newSubject,
       day: newDay,
       startTime: newStartTime,
       endTime: newEndTime,
       room: newRoom,
     };
-    
-    setSchedule([...schedule, newClass]);
-    
-    // Clear form
-    setNewSubject("");
-    setNewStartTime("");
-    setNewEndTime("");
-    setNewRoom("");
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/schedule/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClass),
+      });
+
+      if (response.ok) {
+        const addedClass = await response.json();
+        setSchedule([...schedule, addedClass]);
+        setNewSubject("");
+        setNewStartTime("");
+        setNewEndTime("");
+        setNewRoom("");
+      }
+    } catch (error) {
+      alert("Error syncing to database.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const deleteLecture = (id) => {
-    setSchedule(schedule.filter(lecture => lecture.id !== id));
+  // --- 3. DELETE LECTURE ---
+  const deleteLecture = async (id) => {
+    if (!confirm("Remove this lecture?")) return;
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/schedule/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setSchedule(schedule.filter(lecture => lecture._id !== id));
+      }
+    } catch (error) {
+      alert("Delete failed.");
+    }
   };
 
-  // Group schedule by days for clean rendering
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
     <div className="flex h-screen bg-[#f8f9fb] font-sans text-slate-800 overflow-hidden">
       
-      {/* 1. Sidebar Navigation */}
+      {/* Sidebar (Desktop) */}
       <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col z-20">
         <div className="h-20 flex items-center px-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-              <User size={20} />
+            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold uppercase shadow-sm">
+              {facultyData ? facultyData.name.charAt(0) : <User size={20} />}
             </div>
-            <span className="font-bold text-lg text-slate-900">Faculty Portal</span>
+            <span className="font-bold text-lg text-slate-900 tracking-tight">Faculty Portal</span>
           </div>
         </div>
         <nav className="flex-1 px-4 py-6 space-y-2">
-          <Link href="/faculty/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition-colors">
+          <Link href="/faculty/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <LayoutDashboard size={18} /> Dashboard
           </Link>
-          <Link href="/faculty/schedule" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-medium transition-colors">
+          <Link href="/faculty/schedule" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold shadow-sm">
             <Calendar size={18} /> My Schedule
           </Link>
-          <Link href="#" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-medium transition-colors">
+          <Link href="/faculty/settings" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Settings size={18} /> Settings
           </Link>
         </nav>
       </aside>
 
-      {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         
-        {/* Top Header */}
+        {/* Header with Dynamic Teacher Name */}
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between md:justify-end px-6 md:px-10 z-10">
           <button className="md:hidden text-slate-500"><Menu size={24} /></button>
-          <div className="flex items-center gap-6">
-            <button className="text-slate-400 hover:text-slate-600 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-            </button>
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 border-l border-slate-200 pl-6">
-              <div className="w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-sm"><User size={18} /></div>
+              <div className="w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-sm font-bold uppercase ring-2 ring-white ring-offset-2">
+                {isLoading ? <Loader2 size={14} className="animate-spin" /> : facultyData ? facultyData.name.charAt(0) : "?"}
+              </div>
               <div className="hidden md:block">
-                <p className="text-sm font-bold text-slate-900">Prof. John Doe</p>
-                <p className="text-xs text-slate-500">Computer Science</p>
+                <p className="text-sm font-bold text-slate-900 leading-none">
+                  {isLoading ? "Loading..." : facultyData ? facultyData.name : "Guest User"}
+                </p>
+                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-tight">
+                  {facultyData ? facultyData.department : "Syncing..."}
+                </p>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-10">
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 pb-24">
           <div className="max-w-6xl mx-auto space-y-8">
             
-            {/* Header Title */}
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Lecture Schedule</h1>
-              <p className="text-slate-500 mt-1 text-sm">Manage your weekly classes and timings.</p>
-            </div>
-
-            {/* Smart Reminder Banner (Next Lecture) */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-start gap-4">
-                <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                  <Bell size={24} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-blue-100 mb-1 flex items-center gap-2">
-                    <AlertCircle size={14} /> Upcoming Lecture Reminder
-                  </h3>
-                  <p className="text-xl font-bold">Digital Electronics</p>
-                  <p className="text-sm text-blue-50 mt-1 flex items-center gap-4">
-                    <span className="flex items-center gap-1.5"><Clock size={14} /> Monday, 10:00 AM</span>
-                    <span className="flex items-center gap-1.5"><MapPin size={14} /> Room 304</span>
-                  </p>
-                </div>
-              </div>
-              <button className="bg-white text-blue-600 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-50 transition-colors">
-                View Syllabus
-              </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+               <div>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Lecture Schedule</h1>
+                  <p className="text-slate-500 mt-1 text-sm font-medium">Hello {facultyData ? facultyData.name.split(' ')[0] : "Professor"}, manage your classes here.</p>
+               </div>
+               <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Academic Year 2026
+               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Left Column: Timetable Display (Takes up 2/3 width) */}
+              {/* Left Column: Timetable Display */}
               <div className="lg:col-span-2 space-y-6">
-                <h2 className="text-lg font-bold text-slate-900">Weekly Timetable</h2>
-                
-                {daysOfWeek.map(day => {
-                  const dayClasses = schedule.filter(c => c.day === day);
-                  if (dayClasses.length === 0) return null; // Hide empty days
+                {isLoading ? (
+                  <div className="py-20 text-center flex flex-col items-center">
+                    <Loader2 size={40} className="animate-spin text-blue-600 mb-4" />
+                    <p className="text-slate-400 font-medium tracking-tight">Syncing your timetable with database...</p>
+                  </div>
+                ) : schedule.length > 0 ? (
+                  daysOfWeek.map(day => {
+                    const dayClasses = schedule.filter(c => c.day === day);
+                    if (dayClasses.length === 0) return null;
 
-                  return (
-                    <div key={day} className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] overflow-hidden">
-                      <div className="bg-slate-50 px-6 py-3 border-b border-slate-100">
-                        <h3 className="font-bold text-slate-700">{day}</h3>
-                      </div>
-                      <div className="divide-y divide-slate-50">
-                        {dayClasses.map(lecture => (
-                          <div key={lecture.id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors">
-                            <div className="flex items-start gap-4">
-                              <div className="bg-indigo-50 text-indigo-600 p-2.5 rounded-lg mt-1">
-                                <BookOpen size={20} />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-900 text-base">{lecture.subject}</h4>
-                                <div className="flex items-center gap-4 mt-1.5 text-xs font-medium text-slate-500">
-                                  <span className="flex items-center gap-1.5"><Clock size={14} /> {lecture.startTime} - {lecture.endTime}</span>
-                                  <span className="flex items-center gap-1.5"><MapPin size={14} /> {lecture.room}</span>
+                    return (
+                      <div key={day} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="bg-slate-50 px-6 py-3 border-b border-slate-100">
+                          <h3 className="font-bold text-slate-700 text-[10px] uppercase tracking-widest">{day}</h3>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                          {dayClasses.map(lecture => (
+                            <div key={lecture._id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/50 transition-colors">
+                              <div className="flex items-start gap-4">
+                                <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
+                                  <BookOpen size={20} />
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-slate-900 text-base leading-tight">{lecture.subject}</h4>
+                                  <div className="flex items-center gap-4 mt-1.5 text-xs font-bold text-slate-400 uppercase tracking-tighter">
+                                    <span className="flex items-center gap-1.5"><Clock size={14} className="text-blue-500" /> {lecture.startTime} - {lecture.endTime}</span>
+                                    <span className="flex items-center gap-1.5"><MapPin size={14} className="text-orange-500" /> {lecture.room}</span>
+                                  </div>
                                 </div>
                               </div>
+                              <button onClick={() => deleteLecture(lecture._id)} className="text-slate-300 hover:text-red-500 transition-all p-2 bg-slate-50 rounded-lg">
+                                <Trash2 size={18} />
+                              </button>
                             </div>
-                            <button 
-                              onClick={() => deleteLecture(lecture.id)}
-                              className="text-slate-400 hover:text-red-500 transition-colors p-2"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="bg-white rounded-[40px] p-20 border border-dashed border-slate-200 text-center flex flex-col items-center">
+                    <Inbox size={48} className="text-slate-200 mb-4" />
+                    <p className="text-slate-400 font-bold">No Lectures Found</p>
+                    <p className="text-[10px] text-slate-300 mt-1 uppercase tracking-widest font-black">Sync your first class using the right panel</p>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Add New Class Form */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] h-fit">
-                <h2 className="text-lg font-bold text-slate-900 mb-5 border-b border-slate-100 pb-3">Add New Class</h2>
+              <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit sticky top-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                   <Plus size={20} className="text-blue-600" /> Add New Class
+                </h2>
                 
                 <form onSubmit={handleAddLecture} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Subject Name</label>
-                    <input type="text" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="e.g. Compiler Design" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50" required />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Subject Title</label>
+                    <input type="text" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="e.g. Mobile Computing" className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50/50 font-medium" required />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Day of Week</label>
-                    <select value={newDay} onChange={(e) => setNewDay(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 appearance-none">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Weekday</label>
+                    <select value={newDay} onChange={(e) => setNewDay(e.target.value)} className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50/50 font-medium appearance-none">
                       {daysOfWeek.map(day => <option key={day} value={day}>{day}</option>)}
                     </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Start Time</label>
-                      <input type="time" value={newStartTime} onChange={(e) => setNewStartTime(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50" required />
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Start Time</label>
+                      <input type="time" value={newStartTime} onChange={(e) => setNewStartTime(e.target.value)} className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50/50 font-medium" required />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">End Time</label>
-                      <input type="time" value={newEndTime} onChange={(e) => setNewEndTime(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50" required />
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">End Time</label>
+                      <input type="time" value={newEndTime} onChange={(e) => setNewEndTime(e.target.value)} className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50/50 font-medium" required />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Room / Lab</label>
-                    <input type="text" value={newRoom} onChange={(e) => setNewRoom(e.target.value)} placeholder="e.g. Lab 3" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50" required />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Room / Lab</label>
+                    <input type="text" value={newRoom} onChange={(e) => setNewRoom(e.target.value)} placeholder="e.g. Block B-204" className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50/50 font-medium" required />
                   </div>
-                  {/* Mobile Bottom Navigation - Only visible on small screens */}
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-50">
-     <Link href="/faculty/dashboard" className="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-600">
-    <LayoutDashboard size={20} />
-    <span className="text-[10px] font-medium">Dashboard</span>
-     </Link>
-     <Link href="/faculty/schedule" className="flex flex-col items-center gap-1 text-blue-600 font-bold">
-    <Calendar size={20} />
-    <span className="text-[10px]">Schedule</span>
-     </Link>
-    <Link href="#" className="flex flex-col items-center gap-1 text-slate-500">
-    <Settings size={20} />
-    <span className="text-[10px] font-medium">Settings</span>
-     </Link>
-    </div>
 
-                  <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 mt-2">
-                    <Plus size={18} /> Add to Schedule
+                  <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-700 transition-all flex justify-center items-center gap-2 mt-2 shadow-lg shadow-blue-200">
+                    {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <><Plus size={18} /> Sync to Database</>}
                   </button>
                 </form>
               </div>
@@ -231,6 +272,13 @@ export default function FacultySchedule() {
             </div>
           </div>
         </main>
+
+        {/* Mobile Nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-around items-center z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+          <Link href="/faculty/dashboard" className="flex flex-col items-center gap-1 text-slate-400"><LayoutDashboard size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Home</span></Link>
+          <Link href="/faculty/schedule" className="flex flex-col items-center gap-1 text-blue-600"><Calendar size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Schedule</span></Link>
+          <Link href="/faculty/settings" className="flex flex-col items-center gap-1 text-slate-400"><Settings size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Account</span></Link>
+        </div>
       </div>
     </div>
   );

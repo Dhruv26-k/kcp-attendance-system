@@ -20,6 +20,18 @@ export default function FacultyLogin() {
     setIsLoading(true);
     setErrorMessage("");
 
+    // --- MOCK BYPASS BLOCK ---
+    // This allows testing without a backend connection
+    if (facultyId === "KCP-MOCK-123") {
+      setTimeout(() => {
+        localStorage.setItem("loggedInFacultyId", "KCP-MOCK-123");
+        router.push("/faculty/dashboard");
+        setIsLoading(false);
+      }, 1000);
+      return; 
+    }
+    // -------------------------
+
     try {
       // 1. Send the ID to the backend to verify if the faculty exists
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/login`, {
