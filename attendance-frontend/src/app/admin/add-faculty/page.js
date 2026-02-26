@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+// ❌ REMOVED the global faceapi import from here!
 import Link from "next/link";
 import Image from "next/image";
 import { 
@@ -9,15 +10,64 @@ import {
 } from "lucide-react";
 
 export default function AddFaculty() {
-  // Capture Mode State ('webcam' or 'upload')
+  // --- Tracking the Form Data ---
+  const [formData, setFormData] = useState({
+    name: "",
+    employeeId: "",
+    department: "",
+    email: "",
+    phone: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // --- Capture Mode & Camera States ---
   const [captureMode, setCaptureMode] = useState("webcam");
-  
-  // Camera & Image States
   const [cameraActive, setCameraActive] = useState(false);
   const [faceCaptured, setFaceCaptured] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
+  
+  // --- AI States ---
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [faceDescriptor, setFaceDescriptor] = useState(null);
+
+  // --- Refs ---
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // --- Check if form is unlocked ---
+  const isFormComplete = 
+    formData.name !== "" &&
+    formData.employeeId !== "" &&
+    formData.department !== "" &&
+    formData.email !== "" &&
+    formData.phone !== "" &&
+    faceCaptured === true &&
+    faceDescriptor !== null;
+
+  // --- LOAD AI MODELS ON PAGE LOAD ---
+  useEffect(() => {
+    const loadModels = async () => {
+      // ✅ DYNAMIC IMPORT: Only loads in the browser!
+      const faceapi = await import('@vladmandic/face-api');
+      
+      const MODEL_URL = '/models'; 
+      try {
+        await faceapi.tf.setBackend('webgl'); 
+        await faceapi.tf.ready(); 
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        setModelsLoaded(true);
+        console.log("✅ AI Face Models Loaded successfully!");
+      } catch (err) {
+        console.error("❌ Error loading AI models:", err);
+      }
+    };
+    loadModels();
+  }, []);
 
   // Helper to safely stop the camera
   const stopCamera = () => {
@@ -35,6 +85,7 @@ export default function AddFaculty() {
     }
     setCaptureMode(mode);
     setFaceCaptured(false);
+    setFaceDescriptor(null);
     setUploadedImage(null);
   };
 
@@ -42,6 +93,7 @@ export default function AddFaculty() {
   const startCamera = async () => {
     setCameraActive(true);
     setFaceCaptured(false);
+    setFaceDescriptor(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
@@ -54,29 +106,90 @@ export default function AddFaculty() {
     }
   };
 
-  const captureFaceFromWebcam = () => {
-    // In the real version, face-api.js runs here to get the descriptor!
-    setFaceCaptured(true);
-    stopCamera();
+  const captureFaceFromWebcam = async () => {
+    if (!videoRef.current) return;
+    
+    // ✅ DYNAMIC IMPORT
+    const faceapi = await import('@vladmandic/face-api');
+    
+    const detection = await faceapi
+      .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (detection) {
+      const descriptorArray = Array.from(detection.descriptor);
+      setFaceDescriptor(descriptorArray);
+      setFaceCaptured(true);
+      stopCamera();
+    } else {
+      alert("❌ No face detected! Please look directly at the camera with good lighting.");
+    }
   };
 
   // ---------------- UPLOAD LOGIC ----------------
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Create a preview URL for the uploaded image
       const imageUrl = URL.createObjectURL(file);
       setUploadedImage(imageUrl);
+
+      const img = document.createElement('img');
+      img.src = imageUrl;
       
-      // In the real version, face-api.js will analyze this uploaded image here!
-      setFaceCaptured(true);
+      img.onload = async () => {
+        // ✅ DYNAMIC IMPORT
+        const faceapi = await import('@vladmandic/face-api');
+        
+        const detection = await faceapi
+          .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (detection) {
+          const descriptorArray = Array.from(detection.descriptor);
+          setFaceDescriptor(descriptorArray);
+          setFaceCaptured(true);
+        } else {
+          alert("❌ No face detected in this photo. Please upload a clear, forward-facing image.");
+          setUploadedImage(null);
+        }
+      };
+    }
+  };
+
+  // --- Sending Data to the Backend ---
+  const handleSaveToDB = async () => {
+    setIsSubmitting(true);
+
+    try {
+      // 1. Temporary Bypass so you can test it locally without your friend's backend running!
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      console.log("🚀 READY TO SEND THIS MATH TO DATABASE:");
+      console.log({
+        name: formData.name,
+        employeeId: formData.employeeId,
+        faceDescriptor: faceDescriptor // The massive array of AI math
+      });
+
+      alert(`✅ Success! ${formData.name}'s face was mapped by the AI.`);
+      
+      setFormData({ name: "", employeeId: "", department: "", email: "", phone: "" });
+      setFaceCaptured(false);
+      setFaceDescriptor(null);
+      setUploadedImage(null);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#f8f9fb] flex flex-col font-sans text-slate-800 pb-20 relative">
       
-      {/* 1. Header */}
+      {/* Header */}
       <header className="w-full bg-white px-8 py-3 shadow-sm border-b border-slate-200 flex justify-between items-center z-10">
         <div className="flex items-center">
           <Link href="/">
@@ -95,12 +208,22 @@ export default function AddFaculty() {
         </Link>
       </header>
 
-      {/* 2. Main Content */}
+      {/* Main Content */}
       <main className="flex-grow w-full max-w-[1200px] mx-auto px-4 md:px-8 pt-8">
         
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register New Faculty</h1>
-          <p className="text-slate-500 text-sm mt-1">Add details and provide a face scan/photo to create a secure profile.</p>
+        <div className="mb-8 flex justify-between items-end">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register New Faculty</h1>
+            <p className="text-slate-500 text-sm mt-1">Add details and provide a face scan/photo to create a secure profile.</p>
+          </div>
+          {/* AI Status Indicator */}
+          <div className="text-xs font-semibold px-3 py-1.5 rounded-full border bg-white shadow-sm">
+            {modelsLoaded ? (
+              <span className="text-green-600 flex items-center gap-1">● AI Engine Ready</span>
+            ) : (
+              <span className="text-amber-500 flex items-center gap-1 animate-pulse">● Loading AI Engine...</span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -115,14 +238,26 @@ export default function AddFaculty() {
                   <label className="text-sm font-medium text-slate-700">Full Name</label>
                   <div className="relative">
                     <User size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input type="text" placeholder="Dr. Manjit Singh" className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" />
+                    <input 
+                      type="text" 
+                      placeholder="Dr. Manjit Singh" 
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" 
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">Employee ID</label>
                   <div className="relative">
                     <Hash size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input type="text" placeholder="KCP-2026-04" className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" />
+                    <input 
+                      type="text" 
+                      placeholder="KCP-2026-04" 
+                      value={formData.employeeId}
+                      onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" 
+                    />
                   </div>
                 </div>
               </div>
@@ -131,13 +266,17 @@ export default function AddFaculty() {
                 <label className="text-sm font-medium text-slate-700">Department</label>
                 <div className="relative">
                   <Building size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <select className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all appearance-none text-slate-600">
+                  <select 
+                    value={formData.department}
+                    onChange={(e) => setFormData({...formData, department: e.target.value})}
+                    className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all appearance-none text-slate-600"
+                  >
                     <option value="">Select Department...</option>
-                    <option value="cs">Computer Science</option>
-                    <option value="physics">Physics</option>
-                    <option value="commerce">Commerce</option>
-                    <option value="math">Mathematics</option>
-                    <option value="punjabi">Punjabi</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Commerce">Commerce</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Punjabi">Punjabi</option>
                   </select>
                 </div>
               </div>
@@ -147,14 +286,26 @@ export default function AddFaculty() {
                   <label className="text-sm font-medium text-slate-700">Email Address</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input type="email" placeholder="faculty@khalsacollege.edu.in" className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" />
+                    <input 
+                      type="email" 
+                      placeholder="faculty@khalsacollege.edu.in" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" 
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700">Phone Number</label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input type="tel" placeholder="+91 98765 43210" className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" />
+                    <input 
+                      type="tel" 
+                      placeholder="+91 98765 43210" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white transition-all" 
+                    />
                   </div>
                 </div>
               </div>
@@ -168,7 +319,6 @@ export default function AddFaculty() {
             <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
               <h2 className="text-lg font-bold text-slate-900">Biometric Data</h2>
               
-              {/* Custom Toggle Buttons */}
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button 
                   onClick={() => handleModeSwitch("webcam")}
@@ -188,12 +338,12 @@ export default function AddFaculty() {
             {/* Display Viewport */}
             <div className="flex-grow flex flex-col items-center justify-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 relative overflow-hidden min-h-[250px] mb-6">
               
-              {/* Success Overlay (Shows for both WebCam and Upload) */}
+              {/* Success Overlay */}
               {faceCaptured ? (
                 <div className="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center text-green-600 p-6 text-center animate-in fade-in zoom-in duration-300">
                   <CheckCircle2 size={48} className="mb-3" />
-                  <p className="font-bold text-lg">Face Descriptor Extracted!</p>
-                  <p className="text-xs text-slate-500 mt-1">Mathematical array ready for MongoDB.</p>
+                  <p className="font-bold text-lg">Face Data Mapped!</p>
+                  <p className="text-xs text-slate-500 mt-1">128-point math array generated.</p>
                   <button onClick={() => setFaceCaptured(false)} className="mt-4 text-xs font-semibold text-blue-600 hover:underline">Recapture Data</button>
                 </div>
               ) : null}
@@ -226,10 +376,9 @@ export default function AddFaculty() {
                     <div className="flex flex-col items-center text-slate-400 z-10 p-6 text-center">
                       <ImageIcon size={40} className="mb-3 opacity-50" />
                       <p className="text-sm font-medium">No Image Selected</p>
-                      <p className="text-xs mt-1 max-w-[200px]">Upload a clear, forward-facing passport photo.</p>
+                      <p className="text-xs mt-1 max-w-[200px]">Upload a clear, forward-facing photo.</p>
                     </div>
                   )}
-                  {/* Hidden File Input */}
                   <input 
                     type="file" 
                     accept="image/*" 
@@ -239,15 +388,18 @@ export default function AddFaculty() {
                   />
                 </>
               )}
-
             </div>
 
-            {/* Action Buttons (Changes based on mode) */}
+            {/* Action Buttons */}
             {!faceCaptured && (
               captureMode === "webcam" ? (
                 cameraActive ? (
-                  <button onClick={captureFaceFromWebcam} className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 shadow-sm animate-pulse">
-                    <Camera size={18} /> Extract Face Data
+                  <button 
+                    onClick={captureFaceFromWebcam} 
+                    disabled={!modelsLoaded}
+                    className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex justify-center items-center gap-2 shadow-sm"
+                  >
+                    <Camera size={18} /> {modelsLoaded ? "Capture & Map Face" : "Loading AI..."}
                   </button>
                 ) : (
                   <button onClick={startCamera} className="w-full bg-slate-800 text-white font-semibold py-3 rounded-xl hover:bg-slate-900 transition-colors flex justify-center items-center gap-2 shadow-sm">
@@ -255,22 +407,31 @@ export default function AddFaculty() {
                   </button>
                 )
               ) : (
-                <button onClick={() => fileInputRef.current.click()} className="w-full bg-slate-800 text-white font-semibold py-3 rounded-xl hover:bg-slate-900 transition-colors flex justify-center items-center gap-2 shadow-sm">
-                  <UploadCloud size={18} /> Browse photo
+                <button 
+                  onClick={() => fileInputRef.current.click()} 
+                  disabled={!modelsLoaded}
+                  className="w-full bg-slate-800 text-white font-semibold py-3 rounded-xl hover:bg-slate-900 disabled:bg-slate-400 transition-colors flex justify-center items-center gap-2 shadow-sm"
+                >
+                  <UploadCloud size={18} /> {modelsLoaded ? "Browse photo" : "Loading AI..."}
                 </button>
               )
             )}
           </div>
-
         </div>
 
         {/* Global Submit Button */}
         <div className="mt-8 flex justify-end mb-10">
           <button 
-            disabled={!faceCaptured} 
-            className={`px-8 py-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md ${faceCaptured ? "bg-green-600 text-white hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
+            onClick={handleSaveToDB}
+            disabled={!isFormComplete || isSubmitting} 
+            className={`px-8 py-3.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md ${
+              isFormComplete && !isSubmitting
+                ? "bg-green-600 text-white hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer" 
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+            }`}
           >
-            <Save size={18} /> Complete Registration & Save to DB
+            <Save size={18} /> 
+            {isSubmitting ? "Saving to Database..." : "Complete Registration & Save to DB"}
           </button>
         </div>
 
