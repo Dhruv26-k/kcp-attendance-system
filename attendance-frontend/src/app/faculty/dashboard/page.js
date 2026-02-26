@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { 
   LayoutDashboard, Calendar, Settings, Bell, User, 
-  Clock, Award, TrendingUp, PlayCircle, Info, 
+  Clock, Award, TrendingUp, PlayCircle, 
   Menu, X, Inbox, Loader2, LogOut 
 } from "lucide-react";
 
@@ -93,9 +93,16 @@ export default function FacultyDashboard() {
           <Link href="/faculty/dashboard" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold">
             <LayoutDashboard size={18} /> Dashboard
           </Link>
+          
           <Link href="/faculty/schedule" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Calendar size={18} /> My Schedule
           </Link>
+
+          {/* --- NEW: LEAVE REQUESTS MODULE --- */}
+          <Link href="/faculty/leaves" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
+            <Inbox size={18} /> Leave Requests
+          </Link>
+
           <Link href="/faculty/settings" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Settings size={18} /> Settings
           </Link>
@@ -122,7 +129,7 @@ export default function FacultyDashboard() {
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs font-bold text-slate-900 truncate tracking-tight">
-                  {isLoading ? "Syncing..." : facultyData ? facultyData.name : "Mock Person"}
+                  {isLoading ? "Syncing..." : facultyData ? facultyData.name : "Guest User"}
                 </p>
                 <p className="text-[10px] text-slate-500 truncate">
                   {facultyData ? facultyData.department : "Khalsa College"}
@@ -158,7 +165,7 @@ export default function FacultyDashboard() {
             
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                {/* WELCOME MESSAGE (Switches from Mock to Real) */}
+                {/* WELCOME MESSAGE */}
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                   Welcome back{facultyData ? `, ${facultyData.name.split(' ')[0]}` : ""}!
                 </h1>
