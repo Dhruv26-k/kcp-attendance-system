@@ -33,10 +33,20 @@ export default function FacultyDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Retrieve the logged-in user's ID from localStorage
         const userId = localStorage.getItem("loggedInFacultyId") || "temp-id-123";
 
-        // Fetch user profile and stats from your Express backend
+        // --- MOCK BYPASS FOR TESTING (Switch to real person if ID matches) ---
+        if (userId === "KCP-MOCK-123") {
+          setFacultyData({
+            name: "Prof. Arshdeep Singh",
+            department: "Computer Science"
+          });
+          setStats({ totalPresent: 14, workingHours: "92h", punctuality: "95%", overtime: "6h" });
+          setRecentActivity([{ date: "Feb 26, 2026", timeIn: "09:02 AM", status: "Present" }]);
+          setIsLoading(false);
+          return;
+        }
+
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/dashboard/${userId}`);
         
         if (response.ok) {
@@ -90,7 +100,6 @@ export default function FacultyDashboard() {
             <Settings size={18} /> Settings
           </Link>
           
-          {/* Sign Out Button in Sidebar */}
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors mt-auto"
@@ -99,17 +108,24 @@ export default function FacultyDashboard() {
           </button>
         </nav>
         
+        {/* SIDEBAR PROFILE SECTION (Switches from Mock to Real) */}
         <div className="p-4 border-t border-slate-100">
            <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                {facultyData ? facultyData.name.charAt(0) : "?"}
+                {isLoading ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : facultyData ? (
+                  facultyData.name.charAt(0) 
+                ) : (
+                  "?" 
+                )}
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs font-bold text-slate-900 truncate tracking-tight">
-                  {isLoading ? "Loading..." : facultyData ? facultyData.name : "Guest User"}
+                  {isLoading ? "Syncing..." : facultyData ? facultyData.name : "Mock Person"}
                 </p>
                 <p className="text-[10px] text-slate-500 truncate">
-                  {facultyData ? facultyData.department : "Not connected"}
+                  {facultyData ? facultyData.department : "Khalsa College"}
                 </p>
               </div>
            </div>
@@ -130,7 +146,7 @@ export default function FacultyDashboard() {
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             <Link href="/faculty/settings" className="p-1 border border-slate-200 rounded-full hover:border-blue-300 transition-all">
-               <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-xs">
+               <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
                  {facultyData ? facultyData.name.charAt(0) : <User size={16}/>}
                </div>
             </Link>
@@ -142,6 +158,7 @@ export default function FacultyDashboard() {
             
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
+                {/* WELCOME MESSAGE (Switches from Mock to Real) */}
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                   Welcome back{facultyData ? `, ${facultyData.name.split(' ')[0]}` : ""}!
                 </h1>
