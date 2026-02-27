@@ -4,22 +4,19 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
-  LayoutDashboard, Calendar, Settings, Bell, User, 
-  Clock, Award, TrendingUp, PlayCircle, 
-  Menu, X, Inbox, Loader2, LogOut 
+  LayoutDashboard, Calendar, Bell, User, 
+  PlayCircle, Menu, X, Inbox, Loader2, LogOut, Lock 
 } from "lucide-react";
 
 export default function FacultyDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false); // Controls the profile dropdown
   
   // --- BACKEND CONNECTION STATES ---
   const [isLoading, setIsLoading] = useState(true);
   const [facultyData, setFacultyData] = useState(null);
   const [stats, setStats] = useState({
-    totalPresent: 0,
-    workingHours: "0h",
-    punctuality: "0%",
-    overtime: "0h"
+    totalPresent: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
 
@@ -35,13 +32,15 @@ export default function FacultyDashboard() {
       try {
         const userId = localStorage.getItem("loggedInFacultyId") || "temp-id-123";
 
-        // --- MOCK BYPASS FOR TESTING (Switch to real person if ID matches) ---
+        // --- MOCK BYPASS FOR TESTING ---
         if (userId === "KCP-MOCK-123") {
           setFacultyData({
             name: "Prof. Arshdeep Singh",
-            department: "Computer Science"
+            department: "Computer Science",
+            email: "arshdeep.s@khalsacollege.edu.in",
+            phone: "+91 98765-43210"
           });
-          setStats({ totalPresent: 14, workingHours: "92h", punctuality: "95%", overtime: "6h" });
+          setStats({ totalPresent: 14 }); // Removed extra mock stats
           setRecentActivity([{ date: "Feb 26, 2026", timeIn: "09:02 AM", status: "Present" }]);
           setIsLoading(false);
           return;
@@ -98,14 +97,11 @@ export default function FacultyDashboard() {
             <Calendar size={18} /> My Schedule
           </Link>
 
-          {/* --- NEW: LEAVE REQUESTS MODULE --- */}
           <Link href="/faculty/leaves" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Inbox size={18} /> Leave Requests
           </Link>
 
-          <Link href="/faculty/settings" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
-            <Settings size={18} /> Settings
-          </Link>
+          {/* Settings link removed from here */}
           
           <button 
             onClick={handleLogout}
@@ -115,17 +111,11 @@ export default function FacultyDashboard() {
           </button>
         </nav>
         
-        {/* SIDEBAR PROFILE SECTION (Switches from Mock to Real) */}
+        {/* SIDEBAR PROFILE SECTION */}
         <div className="p-4 border-t border-slate-100">
            <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                {isLoading ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : facultyData ? (
-                  facultyData.name.charAt(0) 
-                ) : (
-                  "?" 
-                )}
+                {isLoading ? <Loader2 size={12} className="animate-spin" /> : facultyData ? facultyData.name.charAt(0) : "?"}
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs font-bold text-slate-900 truncate tracking-tight">
@@ -147,25 +137,62 @@ export default function FacultyDashboard() {
             <Menu size={24} />
           </button>
           
-          <div className="flex items-center gap-4 ml-auto">
+          <div className="flex items-center gap-4 ml-auto relative">
             <button className="text-slate-400 hover:text-slate-600 relative p-2 transition-colors">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <Link href="/faculty/settings" className="p-1 border border-slate-200 rounded-full hover:border-blue-300 transition-all">
-               <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                 {facultyData ? facultyData.name.charAt(0) : <User size={16}/>}
-               </div>
-            </Link>
+            
+            {/* PROFILE DROPDOWN TRIGGER */}
+            <button 
+              onClick={() => setIsProfileOpen(!isProfileOpen)} 
+              className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-xs uppercase hover:ring-2 hover:ring-blue-100 transition-all focus:outline-none"
+            >
+               {facultyData ? facultyData.name.charAt(0) : <User size={16}/>}
+            </button>
+
+            {/* PROFILE DROPDOWN MENU */}
+            {isProfileOpen && (
+              <div className="absolute top-12 right-0 mt-2 w-80 bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 z-50">
+                <div className="flex flex-col items-center text-center mb-6">
+                   <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-bold text-2xl uppercase mb-3 shadow-inner">
+                      {facultyData ? facultyData.name.charAt(0) : <User size={24}/>}
+                   </div>
+                   <h3 className="font-bold text-slate-900 text-lg leading-tight">
+                     {facultyData ? facultyData.name : "Guest User"}
+                   </h3>
+                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-1">
+                     {facultyData ? facultyData.department : "Khalsa College"}
+                   </p>
+                </div>
+                
+                <div className="space-y-4 border-t border-slate-50 pt-5">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Address</span>
+                      <span className="text-sm font-medium text-slate-700">{facultyData?.email || "N/A"}</span>
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</span>
+                      <span className="text-sm font-medium text-slate-700">{facultyData?.phone || "N/A"}</span>
+                   </div>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-slate-50">
+                   <Link href="/faculty/check-in" className="flex items-center justify-center gap-2 w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-colors">
+                      <Lock size={14} /> Reset Biometric Map
+                   </Link>
+                </div>
+              </div>
+            )}
+
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-10 pb-24">
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 pb-24" onClick={() => isProfileOpen && setIsProfileOpen(false)}>
           <div className="max-w-5xl mx-auto space-y-8">
             
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                {/* WELCOME MESSAGE */}
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                   Welcome back{facultyData ? `, ${facultyData.name.split(' ')[0]}` : ""}!
                 </h1>
@@ -178,24 +205,19 @@ export default function FacultyDashboard() {
               </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {[
-                { label: "Total Present", value: stats.totalPresent.toString(), icon: <Calendar size={20}/>, color: "text-blue-500", bg: "bg-blue-50" },
-                { label: "Working Hours", value: stats.workingHours, icon: <Clock size={20}/>, color: "text-orange-500", bg: "bg-orange-50" },
-                { label: "Punctuality", value: stats.punctuality, icon: <Award size={20}/>, color: "text-purple-500", bg: "bg-purple-50" },
-                { label: "Overtime", value: stats.overtime, icon: <TrendingUp size={20}/>, color: "text-green-500", bg: "bg-green-50" }
-              ].map((stat, i) => (
-                <div key={i} className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md ${isLoading ? "opacity-50" : "opacity-100"}`}>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-3">{stat.label}</p>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-2xl font-bold text-slate-800">
-                      {isLoading ? "-" : stat.value}
-                    </h3>
-                    <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}>{stat.icon}</div>
-                  </div>
+            {/* Stats Grid - Now only shows Total Present */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+              <div className={`bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm transition-all flex items-center justify-between ${isLoading ? "opacity-50" : "opacity-100"}`}>
+                <div>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Total Present</p>
+                  <h3 className="text-4xl font-black text-slate-800">
+                    {isLoading ? "-" : stats.totalPresent}
+                  </h3>
                 </div>
-              ))}
+                <div className="p-4 rounded-2xl bg-blue-50 text-blue-500">
+                  <Calendar size={32}/>
+                </div>
+              </div>
             </div>
 
             {/* Attendance Action */}
