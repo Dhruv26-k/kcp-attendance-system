@@ -10,14 +10,12 @@ import {
 
 export default function FacultyDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false); // Controls the profile dropdown
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   // --- BACKEND CONNECTION STATES ---
   const [isLoading, setIsLoading] = useState(true);
   const [facultyData, setFacultyData] = useState(null);
-  const [stats, setStats] = useState({
-    totalPresent: 0
-  });
+  const [stats, setStats] = useState({ totalPresent: 0 });
   const [recentActivity, setRecentActivity] = useState([]);
 
   // --- LOGOUT LOGIC ---
@@ -40,8 +38,11 @@ export default function FacultyDashboard() {
             email: "arshdeep.s@khalsacollege.edu.in",
             phone: "+91 98765-43210"
           });
-          setStats({ totalPresent: 14 }); // Removed extra mock stats
-          setRecentActivity([{ date: "Feb 26, 2026", timeIn: "09:02 AM", status: "Present" }]);
+          
+          // FAKE DATA COMPLETELY CLEARED HERE:
+          setStats({ totalPresent: 0 }); 
+          setRecentActivity([]); 
+          
           setIsLoading(false);
           return;
         }
@@ -100,8 +101,6 @@ export default function FacultyDashboard() {
           <Link href="/faculty/leaves" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Inbox size={18} /> Leave Requests
           </Link>
-
-          {/* Settings link removed from here */}
           
           <button 
             onClick={handleLogout}
@@ -130,7 +129,7 @@ export default function FacultyDashboard() {
       </aside>
 
       {/* 2. MAIN CONTENT */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-10 z-10">
           <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
@@ -140,7 +139,6 @@ export default function FacultyDashboard() {
           <div className="flex items-center gap-4 ml-auto relative">
             <button className="text-slate-400 hover:text-slate-600 relative p-2 transition-colors">
               <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             
             {/* PROFILE DROPDOWN TRIGGER */}
@@ -184,7 +182,6 @@ export default function FacultyDashboard() {
                 </div>
               </div>
             )}
-
           </div>
         </header>
 
@@ -205,7 +202,7 @@ export default function FacultyDashboard() {
               </div>
             </div>
 
-            {/* Stats Grid - Now only shows Total Present */}
+            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <div className={`bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm transition-all flex items-center justify-between ${isLoading ? "opacity-50" : "opacity-100"}`}>
                 <div>
@@ -275,14 +272,21 @@ export default function FacultyDashboard() {
                 </div>
               ) : (
                 <div className="py-24 flex flex-col items-center justify-center text-slate-300 italic">
-                  <Inbox size={48} className="mb-4 opacity-10" />
-                  <p className="text-sm font-medium">No records found for the current month.</p>
+                  <Inbox size={48} className="mb-4 opacity-20" />
+                  <p className="text-sm font-bold text-slate-400 mt-2">No records found for the current month.</p>
                 </div>
               )}
             </div>
 
           </div>
         </main>
+
+        {/* Mobile Nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-around items-center z-50 rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+          <Link href="/faculty/dashboard" className="flex flex-col items-center gap-1 text-blue-600"><LayoutDashboard size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Home</span></Link>
+          <Link href="/faculty/schedule" className="flex flex-col items-center gap-1 text-slate-400"><Calendar size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Schedule</span></Link>
+          <Link href="/faculty/leaves" className="flex flex-col items-center gap-1 text-slate-400"><Inbox size={20} /><span className="text-[10px] font-bold uppercase tracking-tight">Leaves</span></Link>
+        </div>
       </div>
     </div>
   );
