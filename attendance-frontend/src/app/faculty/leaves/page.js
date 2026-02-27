@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
-  Send, Clock, Loader2, ArrowLeft,
-  LayoutDashboard, Calendar, Bell,
+  Send, Loader2,
+  LayoutDashboard, Calendar,
   Menu, X, Inbox, LogOut
 } from "lucide-react";
 
@@ -181,10 +181,7 @@ export default function LeaveManagement() {
             {/* Page Title */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <Link href="/faculty/dashboard" className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                      <ArrowLeft size={18} />
-                    </Link>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                     Leave Management
                   </h1>
                   <p className="text-slate-500 mt-1 text-sm font-medium">Apply for leaves and track your approval status.</p>
