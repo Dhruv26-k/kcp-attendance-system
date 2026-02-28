@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { 
-  Home, LayoutDashboard, LogOut, UserPlus, Calendar, Download, 
-  Users, UserCheck, Clock, UserX, Search, ChevronLeft, ChevronRight, BellOff, Loader2 
+  Home, LayoutDashboard, LogOut, UserPlus, 
+  Users, UserCheck, UserX, Search, Loader2 
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -14,28 +14,63 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({
     totalFaculty: 0,
     presentToday: 0,
-    lateArrivals: 0,
-    onLeave: 0,
-    attendanceRate: "0%"
+    onLeave: 0
   });
   const [attendanceLog, setAttendanceLog] = useState([]);
 
   useEffect(() => {
-    const fetchAdminData = async () => {
+    const fetchDashboardData = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No admin token');
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/overview`);
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data.stats);
-          setAttendanceLog(data.recentLogs || []);
-        }
+        // Fetch stats
+        const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!statsRes.ok) throw new Error('Failed to fetch stats');
+        const statsData = await statsRes.json();
+
+        // Fetch attendance log
+        const logRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard/attendance-log?page=1&limit=10`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!logRes.ok) throw new Error('Failed to fetch attendance log');
+        const logData = await logRes.json();
+
+        setStats({
+          totalFaculty: statsData.totalFaculty,
+          presentToday: statsData.presentToday,
+          onLeave: statsData.onLeaveToday
+        });
+
+        // Transform log records (Added Date and Faculty Name fields)
+        const logs = logData.records.map(record => {
+          // Fallback to today's date if date is missing in DB
+          const dateStr = record.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return {
+            id: record.facultyId || 'N/A', // Assuming you have facultyId in your DB record
+            name: record.facultyName || 'Unknown',
+            department: record.department || 'N/A',
+            date: dateStr,
+            timeIn: record.timeIn,
+            status: record.status === 'present' ? 'Present' : 
+                    record.status === 'late' ? 'Late' : 'Absent'
+          };
+        });
+        setAttendanceLog(logs);
       } catch (error) {
-        console.error("Dashboard connection error:", error);
+        console.error('Dashboard fetch error:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchAdminData();
+
+    fetchDashboardData();
   }, []);
 
   const filteredLogs = attendanceLog.filter(log => {
@@ -79,8 +114,10 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 3. Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Grid (Now 3 columns instead of 4) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          
+          {/* Total Faculty */}
           <Link href="/admin/manage-faculty" className="block group transition-transform hover:-translate-y-1">
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full group-hover:shadow-md">
               <div className="flex justify-between items-start mb-4">
@@ -88,38 +125,30 @@ export default function AdminDashboard() {
                 <div className="p-2 bg-purple-50 text-purple-600 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all"><Users size={18} /></div>
               </div>
               <div className="flex justify-between items-end">
-                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>{isLoading ? "0" : stats.totalFaculty}</h3>
+                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>
+                  {isLoading ? "0" : stats.totalFaculty}
+                </h3>
                 <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Edit List</span>
               </div>
             </div>
           </Link>
 
+          {/* Present Today (Percentage Badge Removed) */}
           <button onClick={() => setFilter("present")} className="text-left group transition-transform hover:-translate-y-1">
             <div className={`bg-white p-6 rounded-3xl border shadow-sm h-full group-hover:shadow-md ${filter === "present" ? "border-green-500" : "border-slate-100"}`}>
               <div className="flex justify-between items-start mb-4">
-                <p className="text-slate-500 text-sm font-medium">Present Today</p>
+                <p className="text-slate-500 text-sm font-medium">Faculty Present</p>
                 <div className="p-2 bg-green-50 text-green-600 rounded-full group-hover:bg-green-600 group-hover:text-white transition-colors"><UserCheck size={18} /></div>
               </div>
               <div className="flex justify-between items-end">
-                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>{isLoading ? "0" : stats.presentToday}</h3>
-                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">{stats.attendanceRate}</span>
+                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>
+                  {isLoading ? "0" : stats.presentToday}
+                </h3>
               </div>
             </div>
           </button>
 
-          <button onClick={() => setFilter("late")} className="text-left group transition-transform hover:-translate-y-1">
-            <div className={`bg-white p-6 rounded-3xl border shadow-sm h-full group-hover:shadow-md ${filter === "late" ? "border-orange-500" : "border-slate-100"}`}>
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-slate-500 text-sm font-medium">Late Arrivals</p>
-                <div className="p-2 bg-orange-50 text-orange-600 rounded-full group-hover:bg-orange-600 group-hover:text-white transition-colors"><Clock size={18} /></div>
-              </div>
-              <div className="flex justify-between items-end">
-                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>{isLoading ? "0" : stats.lateArrivals}</h3>
-                <span className="bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-full">View All</span>
-              </div>
-            </div>
-          </button>
-
+          {/* On Leave */}
           <Link href="/admin/leave-management" className="text-left group transition-transform hover:-translate-y-1 block">
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full group-hover:shadow-md group-hover:border-red-200 transition-all">
               <div className="flex justify-between items-start mb-4">
@@ -127,13 +156,16 @@ export default function AdminDashboard() {
                 <div className="p-2 bg-red-50 text-red-600 rounded-full group-hover:bg-red-600 group-hover:text-white transition-colors"><UserX size={18} /></div>
               </div>
               <div className="flex justify-between items-end">
-                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>{isLoading ? "0" : stats.onLeave}</h3>
-                <span className="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tight hover:bg-red-200 transition-colors">Manage</span>
+                <h3 className={`text-3xl font-bold ${isLoading ? "text-slate-200" : "text-slate-900"}`}>
+                  {isLoading ? "0" : stats.onLeave}
+                </h3>
+                <span className="bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tight">Manage</span>
               </div>
             </div>
           </Link>
         </div>
 
+        {/* Attendance Log Table */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -145,31 +177,53 @@ export default function AdminDashboard() {
               <input type="text" placeholder="Search faculty..." className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm w-48 md:w-64 focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
           </div>
+          
           <div className="overflow-x-auto flex-grow">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
-                <tr><th className="px-6 py-4">Employee</th><th className="px-6 py-4">Department</th><th className="px-6 py-4">Time In</th><th className="px-6 py-4">Status</th></tr>
+                <tr>
+                  <th className="px-6 py-4">Faculty ID</th>
+                  <th className="px-6 py-4">Faculty Name</th> {/* Added column */}
+                  <th className="px-6 py-4">Department</th>
+                  <th className="px-6 py-4">Date</th>         {/* Added column */}
+                  <th className="px-6 py-4">Time In</th>
+                  <th className="px-6 py-4">Status</th>
+                </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan="4" className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-600" /></td></tr>
+                  <tr><td colSpan="6" className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-blue-600" /></td></tr>
                 ) : filteredLogs.length > 0 ? (
                   filteredLogs.map((log, i) => (
                     <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-mono text-slate-500">{log.id}</td>
                       <td className="px-6 py-4 font-semibold text-slate-900">{log.name}</td>
                       <td className="px-6 py-4 text-slate-500">{log.department}</td>
+                      <td className="px-6 py-4 text-slate-500 font-medium">{log.date}</td>
                       <td className="px-6 py-4 font-mono text-blue-600">{log.timeIn}</td>
-                      <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${log.status === "Present" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>{log.status}</span></td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          log.status === "Present" ? "bg-green-100 text-green-700" : 
+                          log.status === "Late" ? "bg-orange-100 text-orange-700" : 
+                          "bg-red-100 text-red-700"
+                        }`}>{log.status}</span>
+                      </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="4" className="px-6 py-20 text-center flex flex-col items-center justify-center opacity-40"><Image src="/Logo.png" alt="Watermark" width={180} height={70} className="mb-4 grayscale" /><p className="text-slate-600 font-semibold text-lg">No {filter !== "all" ? filter : ""} records found</p></td></tr>
+                  <tr><td colSpan="6" className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center opacity-40">
+                      <Image src="/Logo.png" alt="Watermark" width={180} height={70} className="mb-4 grayscale" />
+                      <p className="text-slate-600 font-semibold text-lg">No attendance records yet</p>
+                    </div>
+                  </td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
       </main>
+      
       <footer className="absolute bottom-4 w-full px-8 flex justify-between items-center text-[11px] md:text-xs text-slate-400 font-medium">
         <div className="flex items-center gap-1.5"><UserCheck size={14} />Secure Face Recognition System v1.0</div>
         <div>© 2026 Khalsa College Patiala</div>
