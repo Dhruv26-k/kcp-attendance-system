@@ -56,12 +56,6 @@ export default function LeaveManagement() {
           setFacultyData(profile);
         }
 
-        // Fetch Leave History later when backend is ready
-        // const leaveRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/faculty/leaves/${userId}`);
-        // if (leaveRes.ok) {
-        //   const data = await leaveRes.json();
-        //   setLeaveHistory(data);
-        // }
       } catch (error) {
         console.error("Data sync error:", error);
       } finally {
@@ -88,7 +82,6 @@ export default function LeaveManagement() {
       if (response.ok) {
         alert("Leave request submitted for approval.");
         setFormData({ type: "Casual Leave", startDate: "", endDate: "", reason: "" });
-        // Optionally refresh leave history here
       }
     } catch (error) {
       console.error("Leave submission error:", error);
@@ -120,17 +113,14 @@ export default function LeaveManagement() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {/* Dashboard (Inactive) */}
           <Link href="/faculty/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           
-          {/* Schedule (Inactive) */}
           <Link href="/faculty/schedule" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Calendar size={18} /> My Schedule
           </Link>
 
-          {/* Leaves (Active) */}
           <Link href="/faculty/leaves" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold">
             <Inbox size={18} /> Leave Requests
           </Link>
@@ -169,10 +159,7 @@ export default function LeaveManagement() {
           <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
             <Menu size={24} />
           </button>
-          
-          <div className="flex items-center gap-4 ml-auto relative">
-             {/* Bell and Profile Icon removed, matching the schedule page */}
-          </div>
+          <div className="flex items-center gap-4 ml-auto relative"></div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 md:p-10 pb-24">
@@ -191,10 +178,11 @@ export default function LeaveManagement() {
                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Changed from rigid Grid to flexible Flexbox */}
+            <div className="flex flex-col lg:flex-row gap-8">
               
-              {/* Left Column: Apply Form (Sticky on Desktop) */}
-              <div className="lg:col-span-1 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit sticky top-6">
+              {/* Left Column: Apply Form */}
+              <div className="w-full lg:w-[400px] flex-shrink-0 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit lg:sticky lg:top-6">
                 <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                    <Send size={18} className="text-blue-600" /> New Application
                 </h2>
@@ -240,7 +228,7 @@ export default function LeaveManagement() {
               </div>
 
               {/* Right Column: History Section */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="flex-1">
                 <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center p-10 min-h-[500px]">
                   {isLoading ? (
                     <div className="text-center flex flex-col items-center">
@@ -264,7 +252,7 @@ export default function LeaveManagement() {
                             </tr>
                           </thead>
                           <tbody>
-                            {/* Will map leaveHistory data here when backend is connected */}
+                            {/* History map will go here */}
                           </tbody>
                        </table>
                     </div>

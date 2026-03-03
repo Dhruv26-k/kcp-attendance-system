@@ -28,14 +28,12 @@ export default function AdminDashboard() {
       }
 
       try {
-        // Fetch stats
         const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!statsRes.ok) throw new Error('Failed to fetch stats');
         const statsData = await statsRes.json();
 
-        // Fetch attendance log
         const logRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/dashboard/attendance-log?page=1&limit=10`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -48,12 +46,10 @@ export default function AdminDashboard() {
           onLeave: statsData.onLeaveToday
         });
 
-        // Transform log records (Added Date and Faculty Name fields)
         const logs = logData.records.map(record => {
-          // Fallback to today's date if date is missing in DB
           const dateStr = record.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           return {
-            id: record.facultyId || 'N/A', // Assuming you have facultyId in your DB record
+            id: record.facultyId || 'N/A',
             name: record.facultyName || 'Unknown',
             department: record.department || 'N/A',
             date: dateStr,
@@ -114,10 +110,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid (Now 3 columns instead of 4) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          
-          {/* Total Faculty */}
           <Link href="/admin/manage-faculty" className="block group transition-transform hover:-translate-y-1">
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full group-hover:shadow-md">
               <div className="flex justify-between items-start mb-4">
@@ -133,7 +126,6 @@ export default function AdminDashboard() {
             </div>
           </Link>
 
-          {/* Present Today (Percentage Badge Removed) */}
           <button onClick={() => setFilter("present")} className="text-left group transition-transform hover:-translate-y-1">
             <div className={`bg-white p-6 rounded-3xl border shadow-sm h-full group-hover:shadow-md ${filter === "present" ? "border-green-500" : "border-slate-100"}`}>
               <div className="flex justify-between items-start mb-4">
@@ -148,7 +140,6 @@ export default function AdminDashboard() {
             </div>
           </button>
 
-          {/* On Leave */}
           <Link href="/admin/leave-management" className="text-left group transition-transform hover:-translate-y-1 block">
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full group-hover:shadow-md group-hover:border-red-200 transition-all">
               <div className="flex justify-between items-start mb-4">
@@ -165,7 +156,6 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {/* Attendance Log Table */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -183,9 +173,9 @@ export default function AdminDashboard() {
               <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4">Faculty ID</th>
-                  <th className="px-6 py-4">Faculty Name</th> {/* Added column */}
+                  <th className="px-6 py-4">Faculty Name</th>
                   <th className="px-6 py-4">Department</th>
-                  <th className="px-6 py-4">Date</th>         {/* Added column */}
+                  <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4">Time In</th>
                   <th className="px-6 py-4">Status</th>
                 </tr>
@@ -211,12 +201,7 @@ export default function AdminDashboard() {
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center opacity-40">
-                      <Image src="/Logo.png" alt="Watermark" width={180} height={70} className="mb-4 grayscale" />
-                      <p className="text-slate-600 font-semibold text-lg">No attendance records yet</p>
-                    </div>
-                  </td></tr>
+                  <tr><td colSpan="6" className="px-6 py-20 text-center"><div className="flex flex-col items-center justify-center opacity-40"><Image src="/Logo.png" alt="Watermark" width={180} height={70} className="mb-4 grayscale" /><p className="text-slate-600 font-semibold text-lg">No attendance records yet</p></div></td></tr>
                 )}
               </tbody>
             </table>
