@@ -100,7 +100,7 @@ export default function LeaveManagement() {
       `}>
         <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <Image src="/Logo.png" alt="Logo" width={35} height={35} className="object-contain" />
+            <Image src="/Logo.png" alt="Logo" width={35} height={35} className="object-contain" priority />
             <div className="flex flex-col">
               <span className="font-bold text-sm text-slate-900 leading-tight">Khalsa College</span>
               <span className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Patiala</span>
@@ -166,10 +166,9 @@ export default function LeaveManagement() {
                </div>
             </div>
 
-            {/* Changed Order: History at TOP, Form at BOTTOM */}
             <div className="flex flex-col gap-8">
               
-              {/* 1. History Section (NOW ON TOP) */}
+              {/* 1. History Section */}
               <div className="w-full">
                 <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col p-10 min-h-[300px]">
                   <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -195,17 +194,25 @@ export default function LeaveManagement() {
                               <th className="px-8 py-4">Duration</th>
                               <th className="px-8 py-4">Type</th>
                               <th className="px-8 py-4">Status</th>
+                              <th className="px-8 py-4 text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
                             {leaveHistory.map((leave, index) => (
-                              <tr key={index} className="border-b border-slate-50">
-                                <td className="px-8 py-4 font-medium">{leave.startDate} - {leave.endDate}</td>
-                                <td className="px-8 py-4 text-slate-500">{leave.type}</td>
+                              <tr key={index} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                <td className="px-8 py-4 font-semibold text-slate-900">{leave.startDate} - {leave.endDate}</td>
+                                <td className="px-8 py-4 text-slate-500 font-medium">{leave.type}</td>
                                 <td className="px-8 py-4">
-                                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                    leave.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                  }`}>{leave.status}</span>
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                    leave.status === 'Approved' ? 'bg-green-100 text-green-700' : 
+                                    leave.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                                    'bg-yellow-100 text-yellow-700'
+                                  }`}>{leave.status || 'Pending'}</span>
+                                </td>
+                                <td className="px-8 py-4 text-right">
+                                  <button className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-all">
+                                    <X size={16} />
+                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -216,7 +223,7 @@ export default function LeaveManagement() {
                 </div>
               </div>
 
-              {/* 2. New Application Form (NOW ON BOTTOM) */}
+              {/* 2. New Application Form */}
               <div className="w-full max-w-2xl bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit">
                 <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                    <Send size={18} className="text-blue-600" /> New Application
