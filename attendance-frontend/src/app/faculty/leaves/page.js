@@ -44,7 +44,7 @@ export default function LeaveManagement() {
             name: "Prof. Arshdeep Singh", 
             department: "Computer Science"
           });
-          setLeaveHistory([]); // Ensure empty state for the screenshot request
+          setLeaveHistory([]); // Ensure empty state
           setIsLoading(false);
           return;
         }
@@ -55,7 +55,6 @@ export default function LeaveManagement() {
           const profile = await profileRes.json();
           setFacultyData(profile);
         }
-
       } catch (error) {
         console.error("Data sync error:", error);
       } finally {
@@ -93,7 +92,7 @@ export default function LeaveManagement() {
   return (
     <div className="flex h-screen bg-[#f8f9fb] font-sans text-slate-800 overflow-hidden relative">
       
-      {/* 1. SIDEBAR (Unified Design) */}
+      {/* 1. SIDEBAR */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out flex flex-col
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
@@ -116,24 +115,17 @@ export default function LeaveManagement() {
           <Link href="/faculty/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <LayoutDashboard size={18} /> Dashboard
           </Link>
-          
           <Link href="/faculty/schedule" className="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Calendar size={18} /> My Schedule
           </Link>
-
           <Link href="/faculty/leaves" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-xl font-semibold">
             <Inbox size={18} /> Leave Requests
           </Link>
-          
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors mt-auto"
-          >
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors mt-auto">
             <LogOut size={18} /> Sign Out
           </button>
         </nav>
         
-        {/* SIDEBAR PROFILE SECTION */}
         <div className="p-4 border-t border-slate-100">
            <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs uppercase shadow-sm">
@@ -153,8 +145,6 @@ export default function LeaveManagement() {
 
       {/* 2. MAIN CONTENT */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        
-        {/* HEADER */}
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-10 z-10">
           <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors">
             <Menu size={24} />
@@ -168,9 +158,7 @@ export default function LeaveManagement() {
             {/* Page Title */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                <div>
-                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    Leave Management
-                  </h1>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Leave Management</h1>
                   <p className="text-slate-500 mt-1 text-sm font-medium">Apply for leaves and track your approval status.</p>
                </div>
                <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -178,11 +166,58 @@ export default function LeaveManagement() {
                </div>
             </div>
 
-            {/* Changed from rigid Grid to flexible Flexbox */}
-            <div className="flex flex-col lg:flex-row gap-8">
+            {/* Changed Order: History at TOP, Form at BOTTOM */}
+            <div className="flex flex-col gap-8">
               
-              {/* Left Column: Apply Form */}
-              <div className="w-full lg:w-[400px] flex-shrink-0 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit lg:sticky lg:top-6">
+              {/* 1. History Section (NOW ON TOP) */}
+              <div className="w-full">
+                <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col p-10 min-h-[300px]">
+                  <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                     <Inbox size={18} className="text-blue-600" /> Leave History
+                  </h2>
+                  
+                  {isLoading ? (
+                    <div className="text-center flex flex-col items-center justify-center py-10">
+                      <Loader2 size={40} className="animate-spin text-blue-600 mb-4" />
+                      <p className="text-slate-400 font-medium tracking-tight">Loading history...</p>
+                    </div>
+                  ) : leaveHistory.length === 0 ? (
+                    <div className="text-center text-slate-300 flex flex-col items-center justify-center py-10">
+                      <Inbox size={48} className="mx-auto mb-4 opacity-20" />
+                      <h3 className="font-bold text-slate-500 mb-1">No Leave Records</h3>
+                      <p className="text-[10px] font-bold uppercase tracking-widest">You have not applied for any leaves yet</p>
+                    </div>
+                  ) : (
+                    <div className="w-full overflow-x-auto">
+                       <table className="w-full text-sm text-left whitespace-nowrap">
+                          <thead className="text-[10px] text-slate-400 bg-slate-50 uppercase tracking-widest border-b border-slate-100">
+                            <tr>
+                              <th className="px-8 py-4">Duration</th>
+                              <th className="px-8 py-4">Type</th>
+                              <th className="px-8 py-4">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {leaveHistory.map((leave, index) => (
+                              <tr key={index} className="border-b border-slate-50">
+                                <td className="px-8 py-4 font-medium">{leave.startDate} - {leave.endDate}</td>
+                                <td className="px-8 py-4 text-slate-500">{leave.type}</td>
+                                <td className="px-8 py-4">
+                                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                    leave.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                  }`}>{leave.status}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                       </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. New Application Form (NOW ON BOTTOM) */}
+              <div className="w-full max-w-2xl bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm h-fit">
                 <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                    <Send size={18} className="text-blue-600" /> New Application
                 </h2>
@@ -200,7 +235,7 @@ export default function LeaveManagement() {
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Start Date</label>
                       <input type="date" required onChange={(e) => setFormData({...formData, startDate: e.target.value})} className="w-full px-5 py-3.5 border border-slate-100 rounded-2xl text-[13px] outline-none bg-slate-50/50 font-medium" />
@@ -225,39 +260,6 @@ export default function LeaveManagement() {
                     {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : "Submit Application"}
                   </button>
                 </form>
-              </div>
-
-              {/* Right Column: History Section */}
-              <div className="flex-1">
-                <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center p-10 min-h-[500px]">
-                  {isLoading ? (
-                    <div className="text-center flex flex-col items-center">
-                      <Loader2 size={40} className="animate-spin text-blue-600 mb-4" />
-                      <p className="text-slate-400 font-medium tracking-tight">Loading history...</p>
-                    </div>
-                  ) : leaveHistory.length === 0 ? (
-                    <div className="text-center text-slate-300">
-                      <Inbox size={48} className="mx-auto mb-4 opacity-20" />
-                      <h3 className="font-bold text-slate-500 mb-1">No Leave Records</h3>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">You have not applied for any leaves yet</p>
-                    </div>
-                  ) : (
-                    <div className="w-full overflow-hidden self-start">
-                       <table className="w-full text-sm text-left">
-                          <thead className="text-[10px] text-slate-400 bg-slate-50 uppercase tracking-widest border-b border-slate-100">
-                            <tr>
-                              <th className="px-8 py-4">Duration</th>
-                              <th className="px-8 py-4">Type</th>
-                              <th className="px-8 py-4">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {/* History map will go here */}
-                          </tbody>
-                       </table>
-                    </div>
-                  )}
-                </div>
               </div>
 
             </div>
